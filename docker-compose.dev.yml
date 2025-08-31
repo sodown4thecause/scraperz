@@ -1,0 +1,224 @@
+# Development Docker Compose configuration
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: scraperz-postgres-dev
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-scraperz_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-scraperz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scraperz123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5433:5432"
+    networks:
+      - scraperz-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scraperz} -d ${POSTGRES_DB:-scraperz_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: scraperz-redis-dev
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "6380:6379"
+    networks:
+      - scraperz-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Python API Backend (Development)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: development
+    container_name: scraperz-api-dev
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-scraperz}:${POSTGRES_PASSWORD:-scraperz123}@postgres:5432/${POSTGRES_DB:-scraperz_dev}
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENVIRONMENT=development
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/app
+      - WATCHFILES_FORCE_POLLING=true
+    volumes:
+      - ./api:/app/api:ro
+      - ./requirements.txt:/app/requirements.txt:ro
+      - api_dev_logs:/app/logs
+      - api_dev_data:/app/data
+      - api_dev_cache:/app/cache
+      - api_dev_uploads:/app/uploads
+    ports:
+      - "8001:8000"
+    networks:
+      - scraperz-dev-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    stdin_open: true
+    tty: true
+
+  # Next.js Frontend (Development)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: scraperz-frontend-dev
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+      - PORT=3000
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - ./next.config.js:/app/next.config.js:ro
+      - ./tailwind.config.js:/app/tailwind.config.js:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./postcss.config.js:/app/postcss.config.js:ro
+      - frontend_dev_logs:/app/logs
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3001:3000"
+    networks:
+      - scraperz-dev-network
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    stdin_open: true
+    tty: true
+
+  # Mailhog for Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: scraperz-mailhog-dev
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - scraperz-dev-network
+    restart: unless-stopped
+
+  # pgAdmin for Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: scraperz-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@scraperz.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - scraperz-dev-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  # Redis Commander for Redis Management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: scraperz-redis-commander-dev
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - scraperz-dev-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Jupyter Notebook for Data Analysis
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: development
+    container_name: scraperz-jupyter-dev
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-scraperz}:${POSTGRES_PASSWORD:-scraperz123}@postgres:5432/${POSTGRES_DB:-scraperz_dev}
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PYTHONPATH=/app
+    volumes:
+      - ./api:/app/api:ro
+      - ./notebooks:/app/notebooks
+      - ./data:/app/data
+    ports:
+      - "8888:8888"
+    networks:
+      - scraperz-dev-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  api_dev_logs:
+    driver: local
+  api_dev_data:
+    driver: local
+  api_dev_cache:
+    driver: local
+  api_dev_uploads:
+    driver: local
+  frontend_dev_logs:
+    driver: local
+  pgadmin_dev_data:
+    driver: local
+
+networks:
+  scraperz-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

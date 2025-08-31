@@ -1,0 +1,117 @@
+.animation-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  width: 100%;
+  height: 250px;
+  position: relative;
+  overflow: hidden;
+}
+
+.globe {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: #2c3e50;
+  position: relative;
+  animation: rotate 20s linear infinite;
+}
+
+.globe-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent 70%);
+}
+
+.data-point {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #3498db;
+  border-radius: 50%;
+  animation: blink 1.5s infinite;
+}
+
+.data-point-1 { top: 20%; left: 30%; animation-delay: 0s; }
+.data-point-2 { top: 50%; left: 70%; animation-delay: 0.5s; }
+.data-point-3 { top: 80%; left: 40%; animation-delay: 1s; }
+.data-point-4 { top: 30%; left: 80%; animation-delay: 1.2s; }
+
+.processor {
+  width: 80px;
+  height: 80px;
+  position: relative;
+}
+
+.core {
+  width: 40px;
+  height: 40px;
+  background: #1abc9c;
+  border-radius: 50%;
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  animation: pulse 2s infinite;
+}
+
+.line {
+  position: absolute;
+  height: 2px;
+  background: #3498db;
+  transform-origin: left center;
+}
+
+.line-1 { width: 0; top: 50%; left: -100px; animation: fetchData 4s infinite; animation-delay: 0s; }
+.line-2 { width: 0; top: 50%; left: -100px; animation: fetchData 4s infinite; animation-delay: 0.5s; }
+.line-3 { width: 0; top: 50%; left: -100px; animation: fetchData 4s infinite; animation-delay: 1s; }
+.line-4 { width: 0; top: 50%; left: -100px; animation: fetchData 4s infinite; animation-delay: 1.2s; }
+
+.output {
+  display: flex;
+  flex-direction: column;
+}
+
+.data-card {
+  width: 80px;
+  height: 20px;
+  background: #95a5a6;
+  border-radius: 4px;
+  margin: 5px 0;
+  animation: outputData 4s infinite;
+  opacity: 0;
+}
+
+.data-card:nth-child(1) { animation-delay: 2s; }
+.data-card:nth-child(2) { animation-delay: 2.5s; }
+.data-card:nth-child(3) { animation-delay: 3s; }
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fetchData {
+  0% { width: 0; left: -100px; opacity: 0; }
+  25% { width: 120px; left: -100px; opacity: 1; }
+  50% { width: 0; left: 20px; opacity: 0; }
+  100% { width: 0; left: 20px; opacity: 0; }
+}
+
+@keyframes outputData {
+  0% { opacity: 0; transform: translateX(0); }
+  50% { opacity: 0; transform: translateX(0); }
+  75% { opacity: 1; transform: translateX(20px); }
+  100% { opacity: 0; transform: translateX(20px); }
+}

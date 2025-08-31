@@ -1,0 +1,19 @@
+{
+  "proxies": [
+    {
+      "proxy_url": "http://user:pass@host1:port",
+      "proxy_type": "http",
+      "country": "US"
+    },
+    {
+      "proxy_url": "http://user:pass@host2:port",
+      "proxy_type": "http",
+      "country": "DE"
+    },
+    {
+      "proxy_url": "socks5://user:pass@host3:port",
+      "proxy_type": "socks5",
+      "country": "GB"
+    }
+  ]
+}

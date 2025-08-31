@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+scrapegraphai
+python-dotenv
+google-generativeai
+fastapi-cors
+scrapy
+SQLAlchemy
+psycopg2-binary
+crawl4ai
+httpx
